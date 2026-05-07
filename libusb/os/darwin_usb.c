@@ -972,6 +972,9 @@ static void darwin_exit (struct libusb_context *ctx) {
 static int darwin_get_device_string(struct libusb_device *dev, 
     enum libusb_device_string_type string_type, char *buffer, int length) {
   
+  if (length <= 0)
+    return LIBUSB_ERROR_INVALID_PARAM;
+
   struct darwin_cached_device *priv = DARWIN_CACHED_DEVICE(dev);
   io_iterator_t deviceIterator;
   io_service_t service;
@@ -1009,13 +1012,14 @@ static int darwin_get_device_string(struct libusb_device *dev,
 
   long cfUsedIndex = 0;
   CFStringGetBytes(cf, CFRangeMake(0, CFStringGetLength(cf)), kCFStringEncodingUTF8, '?', false,
-    (uint8_t *) buffer, length, &cfUsedIndex);
+    (uint8_t *) buffer, length - 1, &cfUsedIndex);
   CFRelease(cf);
 
   if (cfUsedIndex <= 0)
     return LIBUSB_ERROR_NOT_FOUND;
 
-  return (int) cfUsedIndex;
+  buffer[cfUsedIndex] = '\0';
+  return (int) cfUsedIndex + 1;
 }
 
 static int get_configuration_index (struct libusb_device *dev, UInt8 config_value) {
